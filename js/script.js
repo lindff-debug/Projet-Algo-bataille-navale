@@ -1,129 +1,213 @@
-console.log("JS chargé !");
-
-// Variables globales
-const tailleGrille = 10;
+// variable grille joueur
+const taille = 10;
 const grille = document.getElementById("grille");
-const compteurElement = document.getElementById("compteur");
-const dernierTirElement = document.getElementById("dernier-tir");
+const compteurEl = document.getElementById("compteur");
+const dernierTirEl = document.getElementById("dernier-tir");
 const boutonRecommencer = document.getElementById("recommencer");
-let plateau = [];
-let coupsJoues = 0;
 
-// Crée la grille et les cases cliquables
+let compteurCoups = 0;
+let grilleJeu = [];
+let navires = [];
+
+// création grille joueur
 function creerGrille() {
-    plateau = [];
     grille.innerHTML = "";
+    grilleJeu = [];
+    for (let i = 0; i < taille; i++) {
+        let ligne = [];
+        for (let j = 0; j < taille; j++) {
+            const cellule = document.createElement("div");
+            cellule.dataset.ligne = i;
+            cellule.dataset.colonne = j;
+            grille.appendChild(cellule);
+            ligne.push(0);
+        }
+        grilleJeu.push(ligne);
+    }
+}
 
-    for (let i = 0; i < tailleGrille; i++) {
-        plateau[i] = [];
-        for (let j = 0; j < tailleGrille; j++) {
-            plateau[i][j] = 0; // 0 = eau
-            const caseDiv = document.createElement("div");
-            caseDiv.dataset.ligne = i;
-            caseDiv.dataset.colonne = j;
-            grille.appendChild(caseDiv);
+// placement des navires (aléatoires)
+function placerNavires() {
+    navires = [];
+    const taillesNavires = [5, 4, 3, 3, 2];
+    for (let tailleNavire of taillesNavires) {
+        let place = false;
+        while (!place) {
+            const orientation = Math.random() < 0.5 ? "horizontal" : "vertical";
+            const ligne = Math.floor(Math.random() * taille);
+            const colonne = Math.floor(Math.random() * taille);
 
-            // Clique sur la case
-            caseDiv.addEventListener("click", () => jouerCoup(i, j, caseDiv));
+            if (orientation === "horizontal" && colonne + tailleNavire <= taille) {
+                let libre = true;
+                for (let k = 0; k < tailleNavire; k++) {
+                    if (grilleJeu[ligne][colonne + k] === 1) {
+                        libre = false;
+                        break;
+                    }
+                }
+                if (libre) {
+                    for (let k = 0; k < tailleNavire; k++) {
+                        grilleJeu[ligne][colonne + k] = 1;
+                    }
+                    navires.push({ taille: tailleNavire, cases: tailleNavire });
+                    place = true;
+                }
+            } else if (orientation === "vertical" && ligne + tailleNavire <= taille) {
+                let libre = true;
+                for (let k = 0; k < tailleNavire; k++) {
+                    if (grilleJeu[ligne + k][colonne] === 1) {
+                        libre = false;
+                        break;
+                    }
+                }
+                if (libre) {
+                    for (let k = 0; k < tailleNavire; k++) {
+                        grilleJeu[ligne + k][colonne] = 1;
+                    }
+                    navires.push({ taille: tailleNavire, cases: tailleNavire });
+                    place = true;
+                }
+            }
         }
     }
 }
 
-// Place aléatoirement les bateaux sans chevauchement
-function placerBateaux() {
-    const bateaux = [
-        { taille: 3 },
-        { taille: 2 },
-        { taille: 2 }
-    ];
+// tirs sur la grille du joueur
+function tirer(event) {
+    const ligne = event.target.dataset.ligne;
+    const colonne = event.target.dataset.colonne;
 
-    for (const bateau of bateaux) {
-        let placeOk = false;
+    if (!ligne || !colonne) return;
 
-        while (!placeOk) {
-            const orientation = Math.random() < 0.5 ? "horizontale" : "verticale";
-            const ligne = Math.floor(Math.random() * tailleGrille);
-            const colonne = Math.floor(Math.random() * tailleGrille);
-
-            let peutPlacer = true;
-            for (let k = 0; k < bateau.taille; k++) {
-                const li = orientation === "horizontale" ? ligne : ligne + k;
-                const co = orientation === "horizontale" ? colonne + k : colonne;
-                if (li >= tailleGrille || co >= tailleGrille || plateau[li][co] === 1) {
-                    peutPlacer = false;
-                    break;
-                }
-            }
-
-            if (peutPlacer) {
-                for (let k = 0; k < bateau.taille; k++) {
-                    const li = orientation === "horizontale" ? ligne : ligne + k;
-                    const co = orientation === "horizontale" ? colonne + k : colonne;
-                    plateau[li][co] = 1; // 1 = bateau
-                }
-                placeOk = true;
-            }
-        }
+    if (event.target.classList.contains("touche") || event.target.classList.contains("manque")) {
+        return;
     }
-}
 
-// Jouer un coup sur la case (ligne, colonne)
-function jouerCoup(ligne, colonne, caseDiv) {
-    if (caseDiv.classList.contains("touche") || caseDiv.classList.contains("manque")) return;
+    compteurCoups++;
+    compteurEl.textContent = "Coups joués : " + compteurCoups;
 
-    coupsJoues++;
-    compteurElement.textContent = `Coups joués : ${coupsJoues}`;
-
-    if (plateau[ligne][colonne] === 1) {
-        caseDiv.classList.add("touche");
-        dernierTirElement.textContent = "Dernier tir : Touché !";
-        plateau[ligne][colonne] = 2; // marque comme touché
+    if (grilleJeu[ligne][colonne] == 1) {
+        event.target.classList.add("touche");
+        dernierTirEl.textContent = "Dernier tir : Touché !";
     } else {
-        caseDiv.classList.add("manque");
-        dernierTirElement.textContent = "Dernier tir : Manqué !";
-    }
-
-    if (tousCoules()) {
-        dernierTirElement.textContent = `Bravo ! Vous avez coulé tous les bateaux en ${coupsJoues} coups.`;
+        event.target.classList.add("manque");
+        dernierTirEl.textContent = "Dernier tir : Manqué...";
     }
 }
 
-// Vérifie si tous les bateaux ont été touchés
-function tousCoules() {
-    for (let i = 0; i < tailleGrille; i++) {
-        for (let j = 0; j < tailleGrille; j++) {
-            if (plateau[i][j] === 1) return false;
+grille.addEventListener("click", tirer);
+
+// bouton pour recommencer
+boutonRecommencer.addEventListener("click", initialiserJeu);
+function initialiserJeu() {
+    compteurCoups = 0;
+    compteurEl.textContent = "Coups joués : 0";
+    dernierTirEl.textContent = "Dernier tir : -";
+    creerGrille();
+    placerNavires();
+}
+
+initialiserJeu();
+
+// variable de la grille ennemie
+const grilleEnnemie = document.getElementById("grille-ennemie");
+let grilleJeuEnnemie = [];
+let naviresEnnemis = [];
+
+// création de grille ennemie
+function creerGrilleEnnemie() {
+    grilleEnnemie.innerHTML = "";
+    grilleJeuEnnemie = [];
+    for (let i = 0; i < taille; i++) {
+        let ligne = [];
+        for (let j = 0; j < taille; j++) {
+            const cellule = document.createElement("div");
+            cellule.dataset.ligne = i;
+            cellule.dataset.colonne = j;
+            grilleEnnemie.appendChild(cellule);
+            ligne.push(0);
+        }
+        grilleJeuEnnemie.push(ligne);
+    }
+}
+
+// placement des navires (aléatoire)
+function placerNaviresEnnemis() {
+    naviresEnnemis = [];
+    const taillesNavires = [5, 4, 3, 3, 2];
+    for (let tailleNavire of taillesNavires) {
+        let place = false;
+        while (!place) {
+            const orientation = Math.random() < 0.5 ? "horizontal" : "vertical";
+            const ligne = Math.floor(Math.random() * taille);
+            const colonne = Math.floor(Math.random() * taille);
+
+            if (orientation === "horizontal" && colonne + tailleNavire <= taille) {
+                let libre = true;
+                for (let k = 0; k < tailleNavire; k++) {
+                    if (grilleJeuEnnemie[ligne][colonne + k] === 1) {
+                        libre = false;
+                        break;
+                    }
+                }
+                if (libre) {
+                    for (let k = 0; k < tailleNavire; k++) {
+                        grilleJeuEnnemie[ligne][colonne + k] = 1;
+                    }
+                    naviresEnnemis.push({ taille: tailleNavire, cases: tailleNavire });
+                    place = true;
+                }
+            } else if (orientation === "vertical" && ligne + tailleNavire <= taille) {
+                let libre = true;
+                for (let k = 0; k < tailleNavire; k++) {
+                    if (grilleJeuEnnemie[ligne + k][colonne] === 1) {
+                        libre = false;
+                        break;
+                    }
+                }
+                if (libre) {
+                    for (let k = 0; k < tailleNavire; k++) {
+                        grilleJeuEnnemie[ligne + k][colonne] = 1;
+                    }
+                    naviresEnnemis.push({ taille: tailleNavire, cases: tailleNavire });
+                    place = true;
+                }
+            }
         }
     }
-    return true;
 }
 
-// Réinitialise le jeu
-function recommencerJeu() {
-    coupsJoues = 0;
-    compteurElement.textContent = `Coups joués : 0`;
-    dernierTirElement.textContent = "Dernier tir : -";
-    creerGrille();
-    placerBateaux();
+// tirs sur la grille ennemie
+function tirerEnnemi(event) {
+    const ligne = event.target.dataset.ligne;
+    const colonne = event.target.dataset.colonne;
+
+    if (!ligne || !colonne) return;
+
+    if (event.target.classList.contains("touche") || event.target.classList.contains("manque")) {
+        return;
+    }
+
+    if (grilleJeuEnnemie[ligne][colonne] == 1) {
+        event.target.classList.add("touche");
+        dernierTirEl.textContent = "Dernier tir sur l’ennemi : Touché !";
+    } else {
+        event.target.classList.add("manque");
+        dernierTirEl.textContent = "Dernier tir sur l’ennemi : Manqué...";
+    }
 }
 
-// Initialisation
-creerGrille();
-placerBateaux();
+grilleEnnemie.addEventListener("click", tirerEnnemi);
 
-// Gestion du bouton recommencer
-boutonRecommencer.addEventListener("click", recommencerJeu);
+// réinitialisation du jeu
+function initialiserJeuComplet() {
+    initialiserJeu();
+    creerGrilleEnnemie();
+    placerNaviresEnnemis();
+}
 
+boutonRecommencer.removeEventListener("click", initialiserJeu);
+boutonRecommencer.addEventListener("click", initialiserJeuComplet);
 
-
-
-
-
-
-
-
-
-
-
-
-
+// lancement du jeu au démarrage
+initialiserJeuComplet();
